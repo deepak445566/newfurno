@@ -60,7 +60,7 @@ const Navbar = ({ user, logout }) => {
                 <span className="text-xs text-gray-500 font-semibold">SELLER</span>
                 
                 <button
-                  onClick={() => handleNavigation("/create")}
+                  onClick={() => handleNavigation("/creat")}
                   className={`px-3 py-2 rounded-lg transition ${
                     isActive("/create-listing") ? "bg-green-100 text-green-700" : "text-gray-700 hover:bg-gray-100"
                   }`}
