@@ -1,0 +1,22 @@
+export const CATEGORIES = [
+  "chair",
+  "sofa",
+  "bed",
+  "table",
+  "cupboard",
+  "desk",
+  "wardrobe",
+  "bookshelf",
+  "dining",
+  "stool",
+  "bench",
+  "drawer",
+  "tv_unit",
+  "shoe_rack",
+  "study_table",
+  "office_chair",
+  "recliner",
+  "cabinet",
+  "rack",
+  "other"
+];
