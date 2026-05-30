@@ -50,7 +50,7 @@ io.on("connection", (socket) => {
 });
 
 app.use(cors({
-  origin: "https://newfurno.vercel.app",
+  origin: "http://localhost:5173",
   credentials: true,
 methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
 }));
@@ -83,7 +83,7 @@ app.get('/health', (req, res) => {
 });
 
 
-
+// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

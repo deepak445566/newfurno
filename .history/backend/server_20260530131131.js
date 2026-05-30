@@ -24,16 +24,16 @@ await connectCloudinary();
 const io = new Server(server, {
   cors: {
     origin: "https://newfurno.vercel.app",
-    methods: ["GET", "POST",]
+    methods: ["GET", "POST",""]
   }
 });
 app.set("io", io);
 
-
+// In your main server file (where io is initialized)
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-
+  // Join user to their personal room for direct messages
   socket.on("register", (userId) => {
     socket.join(`user_${userId}`);
     console.log(`User ${userId} joined their room`);
@@ -50,7 +50,7 @@ io.on("connection", (socket) => {
 });
 
 app.use(cors({
-  origin: "https://newfurno.vercel.app",
+  origin: "http://localhost:5173",
   credentials: true,
 methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
 }));
@@ -83,7 +83,7 @@ app.get('/health', (req, res) => {
 });
 
 
-
+// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
