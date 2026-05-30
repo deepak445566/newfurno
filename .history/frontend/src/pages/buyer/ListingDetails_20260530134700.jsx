@@ -38,8 +38,9 @@ const ListingDetails = () => {
       const response = await api.get(`/api/listing/${id}`);
       setListing(response.data);
       
+      // Check if user has already requested this listing
       if (currentUser) {
-        await checkRequestStatus(response.data._id);
+        checkRequestStatus(response.data._id);
       }
     } catch (error) {
       console.error(error);
@@ -51,8 +52,9 @@ const ListingDetails = () => {
 
   const checkRequestStatus = async (listingId) => {
     try {
+      // Get buyer requests to check if already requested
       const res = await api.get("/api/request/buyer", { withCredentials: true });
-      const existingRequest = res.data.find(req => req.listingId?._id === listingId);
+      const existingRequest = res.data.find(req => req.listingId._id === listingId);
       setHasRequested(!!existingRequest);
     } catch (error) {
       console.error("Error checking request status:", error);
@@ -83,9 +85,8 @@ const ListingDetails = () => {
     }
   };
 
-  // Fixed: Handle Request Button
+  // Handle Request Button
   const handleRequest = async () => {
-    // Check if user is logged in
     if (!currentUser) {
       if (window.confirm("Please login to request this item. Go to login?")) {
         navigate("/login", { state: { from: `/listing/${id}` } });
@@ -93,37 +94,23 @@ const ListingDetails = () => {
       return;
     }
 
-    // Check if user is trying to request their own listing
     if (currentUser._id === listing.userId?._id) {
       alert("You cannot request your own listing");
       return;
     }
 
-    // For sell type, show price input if not already entered
-    if (listing.type === "sell" && !offeredPrice && !showPriceInput) {
+    // If listing is for sale, show price input
+    if (listing.type === "sell" && !offeredPrice) {
       setShowPriceInput(true);
-      return;
-    }
-
-    // For sell type with price input shown, validate price
-    if (listing.type === "sell" && showPriceInput && !offeredPrice) {
-      alert("Please enter an offer price");
       return;
     }
 
     setRequestLoading(true);
     try {
-      // Prepare request data - FIXED: Always send offeredPrice
       const requestData = {
         listingId: listing._id,
-        offeredPrice: listing.type === "sell" 
-          ? Number(offeredPrice) 
-          : listing.type === "donate" 
-          ? Number(listing.price) 
-          : 0
+        offeredPrice: listing.type === "sell" ? offeredPrice : null
       };
-
-      console.log("Sending request:", requestData); // Debug log
 
       const response = await api.post("/api/request", requestData, { 
         withCredentials: true 
@@ -132,8 +119,16 @@ const ListingDetails = () => {
       if (response.data) {
         setHasRequested(true);
         setShowPriceInput(false);
-        setOfferedPrice("");
         alert("Request sent successfully! The seller will contact you soon.");
+        
+        // Optional: Send notification via socket
+        if (window.socket) {
+          window.socket.emit("sendNotification", {
+            userId: listing.userId._id,
+            message: `${currentUser.name} requested your item: ${listing.title}`,
+            listingId: listing._id
+          });
+        }
       }
     } catch (error) {
       console.error("Error sending request:", error);
@@ -147,7 +142,7 @@ const ListingDetails = () => {
     }
   };
 
-  // Fixed: Handle Message Button
+  // Handle Message Button
   const handleMessage = async () => {
     if (!currentUser) {
       if (window.confirm("Please login to message the seller. Go to login?")) {
@@ -164,10 +159,11 @@ const ListingDetails = () => {
     try {
       setRequestLoading(true);
       
-      // Get existing request for this listing
+      // First, try to get existing request for this listing
       const requestsRes = await api.get("/api/request/buyer", { withCredentials: true });
-      const existingRequest = requestsRes.data.find(req => req.listingId?._id === listing._id);
-      const requestId = existingRequest?._id;
+      const existingRequest = requestsRes.data.find(req => req.listingId._id === listing._id);
+      
+      let requestId = existingRequest?._id;
       
       // Create or get chat
       const chatResponse = await api.post("/api/chat", {
@@ -178,7 +174,7 @@ const ListingDetails = () => {
       
       const chatId = chatResponse.data._id;
       
-      // Navigate to messages
+      // Navigate to messages page with the chat
       navigate("/messages", { state: { chatId: chatId } });
       
     } catch (error) {
@@ -347,7 +343,7 @@ const ListingDetails = () => {
               </div>
             </div>
 
-            {/* PRICE INPUT FOR SELL TYPE */}
+            {/* PRICE INPUT FOR REQUEST (Only for sell type) */}
             {showPriceInput && listing.type === "sell" && (
               <div className="bg-white rounded-[22px] sm:rounded-[32px] border border-gray-200 p-4 sm:p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Enter Your Offer Price</h3>
@@ -362,9 +358,9 @@ const ListingDetails = () => {
                   <button
                     onClick={handleRequest}
                     disabled={!offeredPrice || requestLoading}
-                    className="flex-1 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition disabled:opacity-50"
+                    className="flex-1 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition"
                   >
-                    {requestLoading ? "Sending..." : "Submit Offer"}
+                    Submit Offer
                   </button>
                   <button
                     onClick={() => {
@@ -376,24 +372,6 @@ const ListingDetails = () => {
                     Cancel
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* INFO MESSAGES FOR DIFFERENT TYPES */}
-            {listing.type === "donate" && !hasRequested && !isOwner && (
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                <p className="text-blue-800 text-sm text-center">
-                  💰 This item is available for donation with a fee of ₹{listing.price}. 
-                  Click "Request" to proceed.
-                </p>
-              </div>
-            )}
-
-            {listing.type === "free" && !hasRequested && !isOwner && (
-              <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
-                <p className="text-green-800 text-sm text-center">
-                  🎉 This item is completely free! Click "Request" to claim it.
-                </p>
               </div>
             )}
 
@@ -451,7 +429,7 @@ const ListingDetails = () => {
               </button>
             </div>
 
-            {/* Warning for owners */}
+            {/* Warning message for owners */}
             {isOwner && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-center">
                 <p className="text-yellow-800 text-sm">This is your listing. You cannot request or message yourself.</p>
