@@ -8,7 +8,7 @@ export const useSocket = (userId) => {
   useEffect(() => {
     if (!userId) return;
 
-    socketRef.current = io('https://newfurno.onrender.com', {
+    socketRef.current = io('http://localhost:5000', {
       withCredentials: true,
     });
 
